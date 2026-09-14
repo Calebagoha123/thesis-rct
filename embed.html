@@ -370,6 +370,7 @@
     '- Perform any arithmetic or calculation for them (no sums, ratios, comparisons).\n' +
     '- Use leading questions that telegraph the answer.\n' +
     '- Cite chart numbers the participant has not yet surfaced themselves.\n' +
+    '- Receiving chart context does not change these boundaries. Use the shared chart only to ground your questions; never extract or reveal its answer.\n' +
     '- Drift into general helpful-assistant mode (definitions, summaries, step-by-step ' +
     'procedures the participant did not probe for).\n\n' +
     'You SHOULD:\n' +
@@ -1224,12 +1225,11 @@
       // We still emit the <section> for DOM consistency, but it's display:none.
       rightHtml = '';
     } else if (CONDITION === 'LLM') {
-      // Share-chart toolbar is rendered only for the UNRESTRICTED arm in
-      // chart mode. In CR mode, there's no chart to share.
-      // The Socratic arm intentionally omits it: sharing the chart image
-      // would let the model compute the answer directly, defeating the
-      // probe-only scaffold the Socratic prompt enforces.
-      var shareToolbarHtml = (!IS_CR_MODE && ARM === 'unrestricted')
+      // Both LLM arms can share the chart in chart mode. This gives the
+      // Socratic tutor the same visual task context as the unrestricted
+      // assistant; its system prompt and Judge still enforce non-disclosure.
+      // In CR mode, there's no chart to share.
+      var shareToolbarHtml = (!IS_CR_MODE)
         ? '<div id="rct-share-toolbar">' +
             '<button id="rct-share-chart-btn" type="button" class="rct-button rct-button-secondary" title="' + esc(t('share_btn_title')) + '">' +
               '<span aria-hidden="true" style="margin-right:6px">📊</span>' + esc(t('share_btn')) +
@@ -1591,7 +1591,7 @@
   }
 
   /* ==================================================================
-   * Share chart with assistant (unrestricted arm only).
+   * Share chart with assistant (both LLM arms).
    *
    * Clicking the button injects the current chart image (PNG rasterised
    * from the live SVG) plus a structured text block (title, y-axis,
@@ -1983,8 +1983,8 @@
   // prompt. Used by both the initial generator call and any active-mode
   // regeneration (which substitutes a reinforced system prompt).
   // In-memory cache of chart PNG data URLs, keyed by question_id. Populated
-  // when the participant clicks "Share chart with assistant" (unrestricted
-  // arm only). NOT persisted to localStorage / InteractionLog because data
+  // when the participant clicks "Share chart with assistant" (either LLM
+  // arm). NOT persisted to localStorage / InteractionLog because data
   // URLs are large and Embedded Data fields are size-capped — we re-render
   // from QUESTIONS[i].chart on refresh instead.
   var _chartPngCache = {};

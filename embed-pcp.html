@@ -1099,12 +1099,11 @@ Offer these only after the participant has made their own attempt, never before,
       // We still emit the <section> for DOM consistency, but it's display:none.
       rightHtml = '';
     } else if (CONDITION === 'LLM') {
-      // Share-chart toolbar is rendered only for the UNRESTRICTED arm in
-      // chart mode. In CR mode, there's no chart to share.
-      // The Socratic arm intentionally omits it: sharing the chart image
-      // would let the model compute the answer directly, defeating the
-      // probe-only scaffold the Socratic prompt enforces.
-      var shareToolbarHtml = (!IS_CR_MODE && ARM === 'unrestricted')
+      // Both LLM arms can share the chart in chart mode. This gives the
+      // Socratic tutor the same visual task context as the unrestricted
+      // assistant; its system prompt and Judge still enforce non-disclosure.
+      // In CR mode, there's no chart to share.
+      var shareToolbarHtml = (!IS_CR_MODE)
         ? '<div id="rct-share-toolbar">' +
             '<button id="rct-share-chart-btn" type="button" class="rct-button rct-button-secondary" title="' + esc(t('share_chart_title')) + '">' +
               '<span aria-hidden="true" style="margin-right:6px">📊</span>' + esc(t('share_chart')) +
@@ -1507,7 +1506,7 @@ Offer these only after the participant has made their own attempt, never before,
   }
 
   /* ==================================================================
-   * Share chart with assistant (unrestricted arm only).
+   * Share chart with assistant (both LLM arms).
    *
    * Clicking the button injects the current chart image (PNG rasterised
    * from the live SVG) plus a structured text block (title, y-axis,
@@ -1917,8 +1916,8 @@ Offer these only after the participant has made their own attempt, never before,
   // prompt. Used by both the initial generator call and any active-mode
   // regeneration (which substitutes a reinforced system prompt).
   // In-memory cache of chart PNG data URLs, keyed by question_id. Populated
-  // when the participant clicks "Share chart with assistant" (unrestricted
-  // arm only). NOT persisted to localStorage / InteractionLog because data
+  // when the participant clicks "Share chart with assistant" (either LLM
+  // arm). NOT persisted to localStorage / InteractionLog because data
   // URLs are large and Embedded Data fields are size-capped — we re-render
   // from QUESTIONS[i].chart on refresh instead.
   var _chartPngCache = {};
@@ -1966,7 +1965,7 @@ Offer these only after the participant has made their own attempt, never before,
   }
 
   // Rasterise the current VLAT chart <img> to a PNG data URL so it can be
-  // attached to a multimodal message (unrestricted arm "Share chart"). Using
+  // attached to a multimodal message (either LLM arm's "Share chart"). Using
   // a data URL (rather than the bare image URL) means it works both locally
   // and in production, and survives the cross-origin OpenRouter fetch. The
   // chart PNGs are same-origin as this page, so the canvas is not tainted.

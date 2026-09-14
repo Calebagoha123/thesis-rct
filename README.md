@@ -89,11 +89,11 @@ By default the chat/search history resets between questions (constants `RESET_CH
 
 **To add or remove questions**, edit the `QUESTIONS` array in `embed.html` and declare a matching `qN_answer` field in Survey Flow for each new question id. `current_question_index` and `question_count` are written on every interaction so analysts can split drop-outs by which question the participant abandoned.
 
-### Share-chart button (unrestricted arm only)
+### Share-chart button (both LLM arms)
 
-The unrestricted-arm LLM panel has a **📊 Share chart with assistant** button above the chatbox. When clicked, it rasterises the current chart SVG to PNG and attaches it (plus a structured text block with title, y-axis, data points, and the True/False claim) to the next message as a multimodal `user` block. Vision-capable models (the default `openai/gpt-4o-mini` qualifies) can then reason directly about the image; non-vision models will silently ignore it.
+Both the Socratic and unrestricted LLM panels have a **📊 Share chart with assistant** button above the chatbox. When clicked, the legacy `embed.html` flow rasterises the current chart SVG and attaches it with the chart description and task claim. The PCP `embed-pcp.html` flow attaches the displayed chart PNG with its chart type and current question. Both are sent with the participant's next message as a multimodal `user` block. Vision-capable models can then reason about the image; non-vision models will silently ignore it.
 
-The Socratic arm intentionally omits this button — feeding the chart image to the model would let it answer the item directly, defeating the probe-only scaffold.
+In the Socratic arm, sharing changes only the context available to the tutor: the Socratic system prompt still forbids revealing, computing, or confirming the item answer, and the Judge continues to score every response for scaffold fidelity.
 
 One share per question, reset on advance. Each click writes a `context_share` event to `InteractionLog.events` (tagged with `question_id`), but the PNG data is **not** persisted (it's regenerated from `QUESTIONS[i].chart` on each API build, kept in an in-memory cache otherwise). No new Embedded Data fields are required.
 
