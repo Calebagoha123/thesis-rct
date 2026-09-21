@@ -162,6 +162,7 @@
       return {
         id: it.id, raw_id: it.raw_id, chart_id: it.chart_id,
         chart_type: it.chart_type, format: it.format, answer: it.answer,
+        reflection: it.reflection || null,
         time_ms: questionTime(evs),
         answer_ts: answerTs(evs),   // ADDITIVE (adoption latency)
         interaction: interaction

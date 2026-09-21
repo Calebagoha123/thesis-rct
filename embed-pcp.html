@@ -136,6 +136,15 @@
   .rct-option.is-selected { background: #e3f2fd; border-color: #1976d2; }
   .rct-option input { accent-color: #1976d2; cursor: pointer; margin-top: 2px; flex-shrink: 0; }
   .rct-option-idk { border-style: dashed; color: #78909c; }
+  .rct-reflection-title { margin: 0 0 8px; font-size: 16px; color: #263238; }
+  .rct-reflection-prompt { margin: 0 0 12px; font-size: 14px; line-height: 1.45; color: #455a64; }
+  .rct-reflection-text {
+    width: 100%; min-height: 88px; box-sizing: border-box; resize: vertical;
+    padding: 9px; border: 1px solid #b0bec5; border-radius: 4px; font: inherit;
+    font-size: 14px; line-height: 1.4;
+  }
+  .rct-reflection-text:focus { outline: 2px solid #90caf9; border-color: #1976d2; }
+  .rct-reflection-continue { flex: 0 0 auto; margin-top: 12px; }
 
   .rct-button {
     appearance: none; -webkit-appearance: none; border: none; cursor: pointer;
@@ -330,6 +339,7 @@
      practice-block items as the aided 3-arm training phase. -->
 <script src="pcp_items_data.js"></script>
 <script src="pcp_items_de.js"></script>
+<script src="pcp_training_extension.js"></script>
 <script src="pcp_consolidate.js"></script>
 <script>
 (function () {
@@ -568,7 +578,13 @@ Use at most one when relevant: each vertical axis represents a variable rather t
       answer_recorded: 'Your answer has been recorded. Click Next to continue.',
       chat_unreachable: 'Could not reach the assistant: ',
       chart_unavailable: 'Chart image unavailable',
-      placeholder_item: 'Placeholder item — scoring excluded'
+      placeholder_item: 'Placeholder item — scoring excluded',
+      reflection_title: 'Before answering',
+      reflection_prompt: 'Which statement best describes your own reasoning at this point?',
+      reflection_own: 'I can state my own reasoning.',
+      reflection_tool: 'I relied mainly on the tool and cannot state my own reasoning.',
+      reflection_text_prompt: 'Briefly explain your reasoning (one or two sentences).',
+      reflection_continue: 'Continue to question'
     },
     DE: {
       instr_title: 'Anweisungen',
@@ -623,7 +639,13 @@ Use at most one when relevant: each vertical axis represents a variable rather t
       answer_recorded: 'Ihre Antwort wurde gespeichert. Klicken Sie auf „Weiter", um fortzufahren.',
       chat_unreachable: 'Der Assistent ist nicht erreichbar: ',
       chart_unavailable: 'Diagrammbild nicht verfügbar',
-      placeholder_item: 'Platzhalter-Item — von der Bewertung ausgeschlossen'
+      placeholder_item: 'Platzhalter-Item — von der Bewertung ausgeschlossen',
+      reflection_title: 'Vor der Antwort',
+      reflection_prompt: 'Welche Aussage beschreibt Ihr eigenes Nachdenken zu diesem Zeitpunkt am besten?',
+      reflection_own: 'Ich kann meine eigene Begründung nennen.',
+      reflection_tool: 'Ich habe mich hauptsächlich auf das Werkzeug gestützt und kann keine eigene Begründung nennen.',
+      reflection_text_prompt: 'Erläutern Sie Ihre Begründung kurz (ein oder zwei Sätze).',
+      reflection_continue: 'Weiter zur Frage'
     }
   };
   function t(key) {
@@ -706,15 +728,18 @@ Use at most one when relevant: each vertical axis represents a variable rather t
   }
 
   // ── Load VLAT practice-block items (the aided training set) ──────────
-  // Pulls the 9 block:"practice" items from PCP_ITEMS (pcp_items_data.js),
+  // Pulls the eight released practice items plus eight source-authored
+  // training-only items. The four reflection items are always positions 13–16.
   // normalised to the engine's question shape. There is NO client-side
   // answer key by design (participants could view-source it); correctness
   // is scored offline by vlat_scoring.js. Each item carries its chart id so
   // renderVLATChart() can show charts/<chartId>.png.
   function loadVLATItems() {
-    var bank   = (typeof PCP_ITEMS  !== 'undefined' && PCP_ITEMS)  ? PCP_ITEMS  : [];
+    var released = (typeof PCP_ITEMS  !== 'undefined' && PCP_ITEMS)  ? PCP_ITEMS  : [];
+    var extension = (typeof PCP_TRAINING_EXTENSION_ITEMS !== 'undefined' && PCP_TRAINING_EXTENSION_ITEMS)
+      ? PCP_TRAINING_EXTENSION_ITEMS : [];
     var charts = (typeof VLAT_CHARTS !== 'undefined' && VLAT_CHARTS) ? VLAT_CHARTS : {};
-    var mapped = bank
+    var mapped = released.concat(extension)
       .filter(function (it) { return it && it.block === 'practice'; })
       .map(function (it) {
         return {
@@ -727,14 +752,19 @@ Use at most one when relevant: each vertical axis represents a variable rather t
           chartType:  it.chartType,
           chartTitle: (charts[it.chartId] && loc(charts[it.chartId], 'title')) || (LANG === 'DE' && it.chartType === 'Parallel Coordinates' ? 'Parallelkoordinaten' : it.chartType) || 'Chart',
           options:    (it.options || []).map(function (o) { return { key: o.label, text: loc(o, 'text') }; }),
-          hasOmit:    it.hasOmit !== false
+          hasOmit:    it.hasOmit !== false,
+          reflection: !!it.reflection
         };
       });
-    return shuffleArray(mapped);   // unseeded Fisher-Yates, matching the CR engine
+    var ordinary = mapped.filter(function (it) { return !it.reflection; });
+    var reflective = mapped.filter(function (it) { return it.reflection; });
+    return shuffleArray(ordinary).concat(reflective);
   }
 
   // ── Build QUESTIONS array ──
-  // VLAT aided-training mode: the 9 practice items (shuffled). CR loading is
+  // VLAT aided-training mode: 8 released practice items plus 8 source-authored
+  // training-only items. The last 4 start with the reflection declaration.
+  // CR loading is
   // retained above but never invoked here (IS_CR_MODE is hard-disabled).
   var QUESTIONS = loadVLATItems();
 
@@ -878,7 +908,11 @@ Use at most one when relevant: each vertical axis represents a variable rather t
 
   function newLog() {
     var initialAnswers = {};
-    QUESTIONS.forEach(function (q) { initialAnswers[q.id] = null; });
+    var initialReflections = {};
+    QUESTIONS.forEach(function (q) {
+      initialAnswers[q.id] = null;
+      if (q.reflection) initialReflections[q.id] = { complete: false, mode: null, reasoning_text: null };
+    });
     return {
       session_id: (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'sess-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10),
       participant_id: PID,
@@ -900,7 +934,8 @@ Use at most one when relevant: each vertical axis represents a variable rather t
       judge_failure_count: 0,      // turns with non-`ok` Judge status — cumulative
       current_question_index: 0,   // 0-based; advances on per-question submit
       question_count: QUESTIONS.length,
-      answers: initialAnswers
+      answers: initialAnswers,
+      reflections: initialReflections
     };
   }
 
@@ -912,6 +947,12 @@ Use at most one when relevant: each vertical axis represents a variable rather t
       if (!parsed || !parsed.session_id || !parsed.events) return null;
       QUESTIONS.forEach(function (q) {
         if (!(q.id in parsed.answers)) parsed.answers[q.id] = null;
+      });
+      if (!parsed.reflections || typeof parsed.reflections !== 'object') parsed.reflections = {};
+      QUESTIONS.forEach(function (q) {
+        if (q.reflection && !parsed.reflections[q.id]) {
+          parsed.reflections[q.id] = { complete: false, mode: null, reasoning_text: null };
+        }
       });
       // Backfill counters that may be missing on logs written by older versions.
       if (typeof parsed.prompt_count        !== 'number') parsed.prompt_count        = 0;
@@ -999,7 +1040,8 @@ Use at most one when relevant: each vertical axis represents a variable rather t
       if (answer != null && answer !== 'idk') attempted++;
       items.push({
         id: q.id, raw_id: q.raw_id, chart_id: q.chartId,
-        chart_type: q.chartType, format: q.format, answer: answer
+        chart_type: q.chartType, format: q.format, answer: answer,
+        reflection: q.reflection ? (log.reflections[q.id] || null) : null
       });
     });
     return { total: total, answered: answered, attempted: attempted, items: items };
@@ -1320,6 +1362,14 @@ Use at most one when relevant: each vertical axis represents a variable rather t
     // Render CR stem in its dedicated area (above the question block)
     if (IS_CR_MODE) renderCRStem(q);
 
+    // The four final training items deliberately separate tool use from
+    // metacognitive reporting: participants first declare whether they can
+    // give their own reasoning, then answer the source-authored chart item.
+    if (q.reflection && !(log.reflections[q.id] && log.reflections[q.id].complete)) {
+      renderReflection(q, idx);
+      return;
+    }
+
     var html = '';
     html += '<p class="rct-question-progress">' + esc(tf('q_progress', { n: idx + 1, m: QUESTIONS.length })) + '</p>';
     html += '<div class="rct-question" data-qid="' + esc(q.id) + '">';
@@ -1388,9 +1438,63 @@ Use at most one when relevant: each vertical axis represents a variable rather t
     refreshSubmitState();
   }
 
+  function renderReflection(q, idx) {
+    var holder = $('#question-area');
+    var saved = log.reflections[q.id] || { mode: null, reasoning_text: null };
+    var ownChecked = saved.mode === 'own_reasoning' ? ' checked' : '';
+    var toolChecked = saved.mode === 'tool_reliance' ? ' checked' : '';
+    var textHidden = saved.mode === 'own_reasoning' ? '' : ' style="display:none"';
+    var text = saved.reasoning_text || '';
+    holder.innerHTML =
+      '<p class="rct-question-progress">' + esc(tf('q_progress', { n: idx + 1, m: QUESTIONS.length })) + '</p>' +
+      '<div class="rct-question" data-qid="' + esc(q.id) + '">' +
+        '<h2 class="rct-reflection-title">' + esc(t('reflection_title')) + '</h2>' +
+        '<p class="rct-reflection-prompt">' + esc(t('reflection_prompt')) + '</p>' +
+        '<div class="rct-question-options">' +
+          '<label class="rct-option"><input type="radio" name="rct-reflection-' + esc(q.id) + '" value="own_reasoning"' + ownChecked + '/><span>' + esc(t('reflection_own')) + '</span></label>' +
+          '<label class="rct-option"><input type="radio" name="rct-reflection-' + esc(q.id) + '" value="tool_reliance"' + toolChecked + '/><span>' + esc(t('reflection_tool')) + '</span></label>' +
+        '</div>' +
+        '<div id="rct-reflection-text-wrap"' + textHidden + '>' +
+          '<p class="rct-reflection-prompt" style="margin-top:14px">' + esc(t('reflection_text_prompt')) + '</p>' +
+          '<textarea id="rct-reflection-text" class="rct-reflection-text" maxlength="600"></textarea>' +
+        '</div>' +
+      '</div>' +
+      '<button type="button" id="rct-reflection-continue" class="rct-button rct-button-primary rct-reflection-continue" disabled>' + esc(t('reflection_continue')) + '</button>';
+    var textEl = $('#rct-reflection-text');
+    if (textEl) textEl.value = text;
+    function state() {
+      var mode = $('input[name="rct-reflection-' + q.id + '"]:checked');
+      var valid = !!mode && (mode.value === 'tool_reliance' || (textEl && textEl.value.trim().length > 0));
+      var button = $('#rct-reflection-continue'); if (button) button.disabled = !valid;
+    }
+    $$('input[name="rct-reflection-' + q.id + '"]').forEach(function (input) {
+      input.addEventListener('change', function () {
+        $$('.rct-option').forEach(function (lbl) { lbl.classList.remove('is-selected'); });
+        var parent = input.closest('.rct-option'); if (parent) parent.classList.add('is-selected');
+        var wrap = $('#rct-reflection-text-wrap'); if (wrap) wrap.style.display = input.value === 'own_reasoning' ? '' : 'none';
+        state();
+      });
+    });
+    if (textEl) { textEl.addEventListener('input', state); }
+    var current = $('input[name="rct-reflection-' + q.id + '"]:checked');
+    if (current) { var currentParent = current.closest('.rct-option'); if (currentParent) currentParent.classList.add('is-selected'); }
+    $('#rct-reflection-continue').addEventListener('click', function () {
+      var selected = $('input[name="rct-reflection-' + q.id + '"]:checked');
+      if (!selected) return;
+      var reasoning = selected.value === 'own_reasoning' && textEl ? textEl.value.trim() : null;
+      if (selected.value === 'own_reasoning' && !reasoning) return;
+      log.reflections[q.id] = { complete: true, mode: selected.value, reasoning_text: reasoning };
+      logEvent({ type: 'reflection_submitted', question_id: q.id, mode: selected.value, reasoning_text: reasoning });
+      persist();
+      renderQuestions();
+    });
+    state();
+  }
+
   function currentAnswered() {
     var q = currentQuestion();
-    return q && log.answers[q.id] != null;
+    if (!q || log.answers[q.id] == null) return false;
+    return !q.reflection || !!(log.reflections[q.id] && log.reflections[q.id].complete);
   }
 
   function allAnswered() {
@@ -1434,7 +1538,9 @@ Use at most one when relevant: each vertical axis represents a variable rather t
       closeResultInPanel('submit_final');
     }
     var q = currentQuestion();
-    logEvent({ type: 'answer_final', question_id: q.id, value: log.answers[q.id] });
+    var reflection = q.reflection ? log.reflections[q.id] : null;
+    logEvent({ type: 'answer_final', question_id: q.id, value: log.answers[q.id],
+      reasoning_mode: reflection ? reflection.mode : null });
 
     if (isLastQuestion()) {
       // Final submit — lock panel and complete.

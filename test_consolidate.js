@@ -12,7 +12,8 @@ const ts = () => new Date(Date.UTC(2026, 5, 7, 10, 0, _t++)).toISOString();
 
 const items = [
   { id: 'rem_fa_1', raw_id: 3,  chart_id: 'pcp_rem_fa_1', chart_type: 'Parallel Coordinates', format: 'tf', answer: 'A' },
-  { id: 'ana_fa_1', raw_id: 21, chart_id: 'pcp_ana_fa_1', chart_type: 'Parallel Coordinates', format: 'mc', answer: 'C' }
+  { id: 'ana_fa_1', raw_id: 21, chart_id: 'pcp_ana_fa_1', chart_type: 'Parallel Coordinates', format: 'mc', answer: 'C',
+    reflection: { complete:true, mode:'own_reasoning', reasoning_text:'The axes rise together.' } }
 ];
 
 // ───────────────── LLM-Socratic (judge on every turn; q2 triggers a regen) ──
@@ -44,6 +45,7 @@ check('soc: q2 last judge wins (fidelity 4)', r[1].interaction.turns[0].judge.fi
 check('soc: q2 last judge wins (usefulness 4)', r[1].interaction.turns[0].judge.usefulness === 4);
 check('soc: q2 active_regen surfaced', r[1].interaction.turns[0].judge.active_regen === true);
 check('soc: q2 response captured', /horsepower/.test(r[1].interaction.turns[0].response));
+check('soc: reflection mode and text retained', r[1].reflection && r[1].reflection.reasoning_text === 'The axes rise together.' && r[1].reflection.mode === 'own_reasoning');
 
 // ───────────────── LLM-Unrestricted (no judge layer) ──────────────────────
 _t = 0;
