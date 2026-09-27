@@ -34,6 +34,13 @@ a currently available answer. No per-item training confidence scale is added.
 The Mini-VLAT baseline retains its existing abstention option; the separate
 post-training PCS and outcome confidence procedures are unchanged.
 
+Participant-facing chart labels are neutral ("Chart" / "Diagramm"). The
+training chart-type caption is removed, and training and both outcome pages
+use neutral image alternative text, including enlarged images and missing-image
+placeholders. This prevents the interface from supplying the answer to chart-type
+identification questions. Item wording, source metadata and scoring keys remain
+unchanged.
+
 The reasoning record is stored in the existing `vlat_train_responses` JSON
 as `{mode, reasoning_text}`; Qualtrics Survey Flow needs no additional
 Embedded Data fields. The static multiple-choice format is an implementation
