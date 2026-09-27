@@ -556,9 +556,9 @@ You are a concise Socratic tutor. Help the participant perform the next reasonin
       instr_cr_noaid: 'For each question below, read the argument passage carefully and select the best answer from the five options (A–E). No external tools are available for this section. Take your time and reason through each argument before answering.',
       instr_cr_search: 'For each question below, read the argument passage and select the best answer from the five options (A–E). You may use the <strong>search panel</strong> on the right to look up information that helps you reason through the argument. Take your time.',
       instr_cr_llm: 'For each question below, read the argument passage and select the best answer from the five options (A–E). You may use the <strong>assistant</strong> on the right to help you reason through the argument. Take your time.',
-      instr_vlat_noaid: 'For each chart below, read the question carefully and select the best answer. Some questions are multiple-choice; others ask whether a statement is <strong>True</strong> or <strong>False</strong>. No external tools are available for this section.',
-      instr_vlat_search: 'For each chart below, read the question and select the best answer (some are multiple-choice, others True/False). You may use the <strong>search panel</strong> on the right to look up how to read the chart or find supporting information. Take your time.',
-      instr_vlat_llm: 'For each chart below, read the question and select the best answer (some are multiple-choice, others True/False). You may use the <strong>assistant</strong> on the right to help you reason about the chart. Take your time.',
+      instr_vlat_noaid: 'For each chart below, read the question carefully and select the best answer. Some questions are multiple-choice; others ask whether a statement is <strong>True</strong> or <strong>False</strong>. No external tools are available for this section. Choose your best answer even if you are unsure.',
+      instr_vlat_search: 'For each chart below, read the question and select the best answer (some are multiple-choice, others True/False). You may use the <strong>search panel</strong> on the right to look up how to read the chart or find supporting information. Take your time. Choose your best answer even if you are unsure.',
+      instr_vlat_llm: 'For each chart below, read the question and select the best answer (some are multiple-choice, others True/False). You may use the <strong>assistant</strong> on the right to help you reason about the chart. Take your time. Choose your best answer even if you are unsure.',
       pane_vlat: 'Chart',
       pane_cr: 'Logical Reasoning',
       pane_company: 'Company performance',
@@ -617,9 +617,9 @@ You are a concise Socratic tutor. Help the participant perform the next reasonin
       instr_cr_noaid: 'Lesen Sie bei jeder Frage den Argumenttext sorgfältig und wählen Sie die beste Antwort aus den fünf Optionen (A–E). Für diesen Abschnitt stehen keine externen Hilfsmittel zur Verfügung. Nehmen Sie sich Zeit und durchdenken Sie jedes Argument, bevor Sie antworten.',
       instr_cr_search: 'Lesen Sie bei jeder Frage den Argumenttext und wählen Sie die beste Antwort aus den fünf Optionen (A–E). Sie dürfen das <strong>Suchfeld</strong> rechts nutzen, um Informationen nachzuschlagen, die Ihnen beim Durchdenken des Arguments helfen. Nehmen Sie sich Zeit.',
       instr_cr_llm: 'Lesen Sie bei jeder Frage den Argumenttext und wählen Sie die beste Antwort aus den fünf Optionen (A–E). Sie dürfen den <strong>Assistenten</strong> rechts nutzen, um das Argument zu durchdenken. Nehmen Sie sich Zeit.',
-      instr_vlat_noaid: 'Lesen Sie bei jedem Diagramm die Frage sorgfältig und wählen Sie die beste Antwort. Einige Fragen sind Multiple-Choice; bei anderen sollen Sie entscheiden, ob eine Aussage <strong>Wahr</strong> oder <strong>Falsch</strong> ist. Für diesen Abschnitt stehen keine externen Hilfsmittel zur Verfügung.',
-      instr_vlat_search: 'Lesen Sie bei jedem Diagramm die Frage und wählen Sie die beste Antwort (einige sind Multiple-Choice, andere Wahr/Falsch). Sie dürfen das <strong>Suchfeld</strong> rechts nutzen, um nachzuschlagen, wie das Diagramm zu lesen ist, oder um unterstützende Informationen zu finden. Nehmen Sie sich Zeit.',
-      instr_vlat_llm: 'Lesen Sie bei jedem Diagramm die Frage und wählen Sie die beste Antwort (einige sind Multiple-Choice, andere Wahr/Falsch). Sie dürfen den <strong>Assistenten</strong> rechts nutzen, um über das Diagramm nachzudenken. Nehmen Sie sich Zeit.',
+      instr_vlat_noaid: 'Lesen Sie bei jedem Diagramm die Frage sorgfältig und wählen Sie die beste Antwort. Einige Fragen sind Multiple-Choice; bei anderen sollen Sie entscheiden, ob eine Aussage <strong>Wahr</strong> oder <strong>Falsch</strong> ist. Für diesen Abschnitt stehen keine externen Hilfsmittel zur Verfügung. Wählen Sie auch dann die bestmögliche Antwort, wenn Sie unsicher sind.',
+      instr_vlat_search: 'Lesen Sie bei jedem Diagramm die Frage und wählen Sie die beste Antwort (einige sind Multiple-Choice, andere Wahr/Falsch). Sie dürfen das <strong>Suchfeld</strong> rechts nutzen, um nachzuschlagen, wie das Diagramm zu lesen ist, oder um unterstützende Informationen zu finden. Nehmen Sie sich Zeit. Wählen Sie auch dann die bestmögliche Antwort, wenn Sie unsicher sind.',
+      instr_vlat_llm: 'Lesen Sie bei jedem Diagramm die Frage und wählen Sie die beste Antwort (einige sind Multiple-Choice, andere Wahr/Falsch). Sie dürfen den <strong>Assistenten</strong> rechts nutzen, um über das Diagramm nachzudenken. Nehmen Sie sich Zeit. Wählen Sie auch dann die bestmögliche Antwort, wenn Sie unsicher sind.',
       pane_vlat: 'Diagramm',
       pane_cr: 'Logisches Denken',
       pane_company: 'Unternehmensleistung',
@@ -777,8 +777,11 @@ You are a concise Socratic tutor. Help the participant perform the next reasonin
           chartId:    it.chartId,
           chartType:  it.chartType,
           chartTitle: (charts[it.chartId] && loc(charts[it.chartId], 'title')) || (LANG === 'DE' && it.chartType === 'Parallel Coordinates' ? 'Parallelkoordinaten' : it.chartType) || 'Chart',
-          options:    (it.options || []).map(function (o) { return { key: o.label, text: loc(o, 'text') }; }),
-          hasOmit:    it.hasOmit !== false,
+          // Match the outcome pages: filter the source English abstention
+          // before localization, preserving substantive option letters.
+          options:    (it.options || []).filter(function (o) { return o.text !== "I don't know"; })
+            .map(function (o) { return { key: o.label, text: loc(o, 'text') }; }),
+          hasOmit:    false,
           reflection: !!it.reflection
         };
       });
@@ -1412,7 +1415,7 @@ You are a concise Socratic tutor. Help the participant perform the next reasonin
       html += '</div>';
     } else if (q.type === 'vlat') {
       // VLAT mode: chart shown above (renderVLATChart); here we render the
-      // question text + its MC (A–D) or True/False options, plus optional omit.
+      // question text and substantive MC or True/False options only.
       html += '<p class="rct-question-text">' + esc(q.text) + '</p>';
       var name = 'rct-' + q.id;
       html += '<div class="rct-question-options">';
@@ -1520,6 +1523,9 @@ You are a concise Socratic tutor. Help the participant perform the next reasonin
   function currentAnswered() {
     var q = currentQuestion();
     if (!q || log.answers[q.id] == null) return false;
+    // An older saved abstention is no longer a selectable training answer.
+    // Preserve the historical log, but require a current substantive choice.
+    if (q.type === 'vlat' && !q.options.some(function (opt) { return opt.key === log.answers[q.id]; })) return false;
     return !q.reflection || !!(log.reflections[q.id] && log.reflections[q.id].complete);
   }
 

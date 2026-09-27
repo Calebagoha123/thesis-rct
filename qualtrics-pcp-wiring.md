@@ -22,8 +22,9 @@ rendered GitHub page.
 - `embed-pcp.html` hardcodes `PHASE='vlattrain'` and loads 16 training items itself:
   the 8 released `block:"practice"` PCP items plus 8 source-authored, training-only
   items. The final four require a reasoning/tool-reliance declaration before the
-  chart question. No `phase=`/`set=` params are needed. The 16-item immediate
-  and 16-item delayed outcome banks remain held out.
+  chart question. All training items require a best substantive answer, with
+  no “I don't know” option or per-item confidence scale. No `phase=`/`set=` params
+  are needed. The 16-item immediate and 16-item delayed outcome banks remain held out.
 - Post-tests ship **no answer key** (participant-facing). They store the chosen
   option **letter** per item; correctness is scored **offline** against
   `PCP_KEY` in `pcp_scoring.js`. Per-item time cap is `TIME_LIMIT=90s` (tunable at
